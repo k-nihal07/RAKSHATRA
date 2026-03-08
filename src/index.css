@@ -1,22 +1,22 @@
 :root {
-  /* Colors */
-  --color-primary: #0066FF; /* Trust Blue */
-  --color-primary-light: #E5F0FF;
-  --color-primary-dark: #004CDE;
+  /* Colors - MakeMyTrip Theme */
+  --color-primary: #008cff; /* MMT Blue */
+  --color-primary-light: #e5f3ff;
+  --color-primary-dark: #0070cc;
   
-  --color-secondary: #00C853; /* Travel Green */
+  --color-secondary: #00C853; /* Success Green */
   --color-secondary-light: #E8F5E9;
   --color-secondary-dark: #00A040;
   
-  --color-danger: #FF3B30; /* Emergency Red */
-  --color-danger-light: #FFEBEE;
-  --color-danger-dark: #D32F2F;
+  --color-danger: #EB2026; /* MMT Red */
+  --color-danger-light: #FDE8E9;
+  --color-danger-dark: #D31D22;
 
-  --color-background: #F8F9FA;
-  --color-surface: #FFFFFF;
-  --color-text: #1C1C1E;
-  --color-text-muted: #8E8E93;
-  --color-border: #E5E5EA;
+  --color-background: #F2F2F2; /* Light Gray Background */
+  --color-surface: #FFFFFF; /* White Cards */
+  --color-text: #000000;
+  --color-text-muted: #4a4a4a;
+  --color-border: #EAEAEA;
 
   --color-warning: #FF9500;
   
@@ -43,11 +43,11 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-background: #000000;
-    --color-surface: #1C1C1E;
+    --color-background: #121212;
+    --color-surface: #1E1E1E;
     --color-text: #FFFFFF;
-    --color-text-muted: #8E8E93;
-    --color-border: #38383A;
+    --color-text-muted: #A0A0A0;
+    --color-border: #333333;
   }
 }
 

@@ -23,10 +23,16 @@ export default function RouteRecommendation() {
       </div>
 
       {/* Interactive Map on Top */}
-      <div style={{ height: '240px', width: '100%', position: 'relative' }}>
+      <div style={{ height: '240px', width: '100%', position: 'relative', backgroundColor: '#e5e3df' }}>
         <iframe 
           title="Route Map"
-          src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d124415.85303681438!2d77.51159837050361!3d12.9715987!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae1670c9b44e6d%3A0xf8dfc3e8517e4fe0!2s${encodeURIComponent(dest || 'Bengaluru')}!5e0!3m2!1sen!2sin!4v1710000000000!5m2!1sen!2sin`}
+          src={
+            start && dest && start !== 'Current Loc'
+              ? `https://maps.google.com/maps?saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(dest)}&output=embed`
+              : dest 
+                ? `https://maps.google.com/maps?q=${encodeURIComponent(dest)}&output=embed`
+                : `https://maps.google.com/maps?q=Bengaluru&output=embed`
+          }
           width="100%" 
           height="100%" 
           style={{ border: 0, filter: 'contrast(1.1) saturate(1.2)' }} 

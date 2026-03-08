@@ -18,6 +18,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [location, setLocation] = useState('');
+  const [digilockerVerified, setDigilockerVerified] = useState(false);
 
   // Helper to prevent Firestore from hanging indefinitely if the db isn't created yet
   const withTimeout = (promise, ms = 5000) => {
@@ -52,10 +53,17 @@ export default function Login() {
         }
       } else {
         // Handle Registration
-        if (activeTab === 'provider' && !serviceType) {
-          alert("Please select a service type");
-          setLoading(false);
-          return;
+        if (activeTab === 'provider') {
+          if (!serviceType) {
+            alert("Please select a service type");
+            setLoading(false);
+            return;
+          }
+          if (!digilockerVerified) {
+            alert("Please verify your business with DigiLocker");
+            setLoading(false);
+            return;
+          }
         }
 
         userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -319,30 +327,50 @@ export default function Login() {
             />
           </div>
 
-          {/* Location for Provider */}
+          {/* Location & Digilocker for Provider */}
           {activeTab === 'provider' && (
-            <div style={{ position: 'relative' }}>
-              <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.7 }}>
-                <MapPin size={18} />
+            <>
+              <div style={{ position: 'relative' }}>
+                <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.7 }}>
+                  <MapPin size={18} />
+                </div>
+                <input 
+                  type="text"
+                  placeholder="Service Location"
+                  style={{
+                    width: '100%',
+                    padding: '16px 16px 16px 48px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
+                    color: 'white',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  required
+                />
               </div>
-              <input 
-                type="text"
-                placeholder="Service Location"
-                style={{
-                  width: '100%',
-                  padding: '16px 16px 16px 48px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  color: 'white',
-                  fontSize: '0.9rem',
-                  outline: 'none'
-                }}
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                required
-              />
-            </div>
+
+              {/* DigiLocker Verification Checkbox */}
+              <div style={{ 
+                display: 'flex', alignItems: 'center', gap: '12px', 
+                backgroundColor: 'rgba(255,255,255,0.1)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.2)' 
+              }}>
+                <input 
+                  type="checkbox" 
+                  id="digilocker" 
+                  checked={digilockerVerified}
+                  onChange={(e) => setDigilockerVerified(e.target.checked)}
+                  style={{ width: '20px', height: '20px', accentColor: '#008cff', cursor: 'pointer' }}
+                />
+                <label htmlFor="digilocker" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)' }}>
+                  Verify with 
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/DigiLocker_logo.svg/512px-DigiLocker_logo.svg.png" alt="DigiLocker" style={{ height: '24px', backgroundColor: 'white', padding: '2px 6px', borderRadius: '4px' }} />
+                </label>
+              </div>
+            </>
           )}
 
           {/* Action Buttons */}

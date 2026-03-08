@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Car, Star, Phone, ShieldCheck, User, MapPin } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function NearbyTransport() {
   const navigate = useNavigate();
@@ -12,38 +12,74 @@ export default function NearbyTransport() {
     { id: 3, name: 'Vijay P.', vehicle: 'Auto Rickshaw', number: 'KA-03-CD-4567', rating: 4.5, fare: '₹50 - ₹130', verified: false, location: 'Indiranagar' },
   ]);
   const [selectedDriver, setSelectedDriver] = useState(null);
+  const [showFeedbackInput, setShowFeedbackInput] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [ratingValue, setRatingValue] = useState(0);
 
-  // Fetch registered Service Providers from Firestore
+  // Get current user info for bookings
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+  const handleReport = async () => {
+    if (ratingValue === 0 && !feedbackText) {
+      alert("Please provide a rating or feedback text.");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'feedbacks'), {
+        providerId: selectedDriver.id,
+        rating: ratingValue,
+        text: feedbackText,
+        userId: currentUser.uid || 'guest',
+        userName: currentUser.name || 'Traveler',
+        timestamp: serverTimestamp()
+      });
+      alert(`Feedback submitted for ${selectedDriver.name}!`);
+    } catch(e) {
+      console.error("Error submitting feedback:", e);
+      alert("Firebase Error: " + e.message + "\n\nPlease ensure your Firestore Database is created in Test Mode.");
+    }
+
+    setShowFeedbackInput(false);
+    setFeedbackText('');
+    setRatingValue(0);
+  };
+
+  // Real-time Provider Fetch
   useEffect(() => {
-    const fetchProviders = async () => {
-      try {
-        const q = query(
-          collection(db, "users"),
-          where("role", "==", "provider"),
-          where("serviceType", "==", "Transport")
-        );
-        const querySnapshot = await getDocs(q);
-        const fetchedDrivers = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            name: data.name,
-            vehicle: 'Registered Vehicle',
-            number: 'Verify via Profile',
-            rating: 5.0, // Default rating for new users
-            fare: 'Varies',
-            verified: true,
-            location: data.location || 'Unknown'
-          };
-        });
-        
-        // Append fetched drivers to the mock list
-        setDrivers(prev => [...prev, ...fetchedDrivers]);
-      } catch (err) {
-        console.error("Failed to fetch drivers", err);
-      }
-    };
-    fetchProviders();
+    const q = query(
+      collection(db, "users"),
+      where("role", "==", "provider"),
+      where("serviceType", "==", "Transport")
+    );
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const fetchedDrivers = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name,
+          vehicle: 'Registered Vehicle',
+          number: 'Verify via Profile',
+          rating: 5.0, // Default rating for new users
+          fare: 'Varies',
+          verified: true,
+          location: data.location || 'Unknown'
+        };
+      });
+      
+      // Merge static mock drivers with dynamically fetched drivers
+      const mockDrivers = [
+        { id: 1, name: 'Ramesh K.', vehicle: 'Auto Rickshaw', number: 'KA-01-AB-1234', rating: 4.8, fare: '₹50 - ₹120', verified: true, location: 'Bangalore South' },
+        { id: 2, name: 'Suresh M.', vehicle: 'Sedan Taxi', number: 'KA-05-XY-9876', rating: 4.9, fare: '₹150 - ₹300', verified: true, location: 'City Center' },
+        { id: 3, name: 'Vijay P.', vehicle: 'Auto Rickshaw', number: 'KA-03-CD-4567', rating: 4.5, fare: '₹50 - ₹130', verified: false, location: 'Indiranagar' }
+      ];
+      setDrivers([...mockDrivers, ...fetchedDrivers]);
+    }, (error) => {
+      console.error("Failed to fetch real-time drivers", error);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   return (
@@ -91,7 +127,29 @@ export default function NearbyTransport() {
                 >
                   View Profile
                 </button>
-                <button className="btn btn-primary flex-1"><Phone size={16} /> Contact</button>
+                <button 
+                  className="btn btn-primary flex-1"
+                  onClick={async () => {
+                    try {
+                      await addDoc(collection(db, 'service_requests'), {
+                        providerId: driver.id,
+                        type: 'Transport',
+                        action: 'Ride Request',
+                        status: 'pending',
+                        timestamp: serverTimestamp(),
+                        userId: currentUser.uid || 'guest',
+                        userName: currentUser.name || 'Traveler',
+                        location: driver.location || 'Current Loc'
+                      });
+                      alert(`Ride request sent to ${driver.name}! They will be notified immediately.`);
+                    } catch (e) {
+                      console.error("Booking error:", e);
+                      alert("Firebase Error: " + e.message + "\n\nPlease ensure your Firestore Database is created in Test Mode.");
+                    }
+                  }}
+                >
+                  <Phone size={16} /> Contact
+                </button>
               </div>
             </div>
           ))}
@@ -145,13 +203,50 @@ export default function NearbyTransport() {
                 </div>
               </div>
 
-              <button 
-                className="btn btn-primary" 
-                style={{ width: '100%', marginTop: '24px', border: 'none' }}
-                onClick={() => setSelectedDriver(null)}
-              >
-                Close Profile
-              </button>
+              {!showFeedbackInput ? (
+                <div className="flex gap-2" style={{ width: '100%', marginTop: '24px' }}>
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ flex: 1, border: 'none' }}
+                    onClick={() => setSelectedDriver(null)}
+                  >
+                    Close
+                  </button>
+                  <button 
+                    className="btn" 
+                    style={{ flex: 1, backgroundColor: 'var(--color-danger)', color: 'white', border: 'none' }}
+                    onClick={() => setShowFeedbackInput(true)}
+                  >
+                    Report / Rate
+                  </button>
+                </div>
+              ) : (
+                <div className="flex-col gap-2" style={{ width: '100%', marginTop: '24px' }}>
+                  <div className="flex justify-center gap-2 mb-3">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star 
+                        key={star} 
+                        size={32} 
+                        fill={star <= ratingValue ? "#F57C00" : "transparent"} 
+                        color={star <= ratingValue ? "#F57C00" : "rgba(255,255,255,0.3)"}
+                        onClick={() => setRatingValue(star)}
+                        style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                      />
+                    ))}
+                  </div>
+                  <textarea 
+                    placeholder="Describe the issue or provide feedback..."
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', resize: 'none' }}
+                    rows={3}
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <button className="btn btn-outline flex-1" style={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)', flex: 1 }} onClick={() => setShowFeedbackInput(false)}>Cancel</button>
+                    <button className="btn flex-1" style={{ backgroundColor: 'var(--color-danger)', color: 'white', border: 'none', flex: 1 }} onClick={handleReport}>Submit Report</button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </>

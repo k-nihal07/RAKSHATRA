@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Mail, MapPin, Briefcase, Star, Gift, Copy } from 'lucide-react';
+import { ArrowLeft, User, Mail, MapPin, Briefcase, Star, Gift, Copy, MessageSquare } from 'lucide-react';
+import { db } from '../firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 export default function ProviderProfile() {
   const navigate = useNavigate();
@@ -13,12 +15,30 @@ export default function ProviderProfile() {
   const [promoCode, setPromoCode] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
 
+  const [feedbacks, setFeedbacks] = useState([]);
+
   useEffect(() => {
     const data = localStorage.getItem('user');
     if (data) {
       setUser(JSON.parse(data));
     }
   }, []);
+
+  // Fetch real-time feedbacks
+  useEffect(() => {
+    if (!user.uid) return;
+    const q = query(collection(db, "feedbacks"), where("providerId", "==", user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedFeedbacks = [];
+      snapshot.forEach(doc => {
+        fetchedFeedbacks.push({ id: doc.id, ...doc.data() });
+      });
+      // Sort newest first
+      fetchedFeedbacks.sort((a, b) => b.timestamp - a.timestamp);
+      setFeedbacks(fetchedFeedbacks);
+    });
+    return () => unsubscribe();
+  }, [user.uid]);
 
   const handleRedeem = (title, cost) => {
     if (points >= cost) {
@@ -60,7 +80,10 @@ export default function ProviderProfile() {
           </div>
           <h2 style={{ fontSize: '1.5rem' }}>{user.name}</h2>
           <div className="flex items-center gap-2 text-sm justify-center" style={{ color: 'var(--color-secondary)', fontWeight: 600 }}>
-            <Star size={16} fill="var(--color-secondary)" /> 4.9 Rating
+            <Star size={16} fill="var(--color-secondary)" /> 
+            {feedbacks.length > 0 
+              ? (feedbacks.reduce((acc, curr) => acc + (curr.rating || 5), 0) / feedbacks.length).toFixed(1) 
+              : "5.0"} Rating
           </div>
         </div>
 
@@ -92,6 +115,32 @@ export default function ProviderProfile() {
             </div>
           </div>
 
+        </div>
+
+        {/* Live Feedback Section */}
+        <div className="card flex-col gap-4" style={{ marginTop: '16px' }}>
+          <div className="flex items-center justify-between" style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '8px' }}>
+            <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Recent Feedback</h3>
+            <MessageSquare size={18} color="var(--color-text-muted)" />
+          </div>
+
+          <div className="flex-col gap-3">
+            {feedbacks.length > 0 ? (
+              feedbacks.map(fb => (
+                <div key={fb.id} style={{ padding: '12px', backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px' }}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{fb.userName || 'Guest User'}</span>
+                    <div className="flex items-center gap-1" style={{ color: '#F57C00', fontSize: '0.8rem', fontWeight: 600 }}>
+                      <Star size={12} fill="#F57C00" /> {fb.rating || 5}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted" style={{ fontStyle: 'italic' }}>"{fb.text || 'No comment provided.'}"</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted text-center" style={{ padding: '16px 0' }}>No feedback received yet.</p>
+            )}
+          </div>
         </div>
 
         {/* Rewards Section */}

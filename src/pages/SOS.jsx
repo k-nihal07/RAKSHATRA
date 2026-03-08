@@ -1,13 +1,61 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, AlertTriangle, Phone, CheckCircle, ArrowLeft } from 'lucide-react';
+import { db } from '../firebase';
+import { collection, addDoc, serverTimestamp, doc, onSnapshot, updateDoc } from 'firebase/firestore';
 
 export default function SOS() {
   const navigate = useNavigate();
   const [sosActive, setSosActive] = useState(false);
+  const [activeSosId, setActiveSosId] = useState(null);
+  const [sosResponse, setSosResponse] = useState(null);
 
-  const handleSOS = () => {
+  React.useEffect(() => {
+    if (!activeSosId) return;
+    const unsubscribe = onSnapshot(doc(db, 'sos_alerts', activeSosId), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.status === 'responded' && data.responder) {
+          setSosResponse(data.responder);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [activeSosId]);
+
+  const handleSOS = async () => {
+    if (sosActive) return;
     setSosActive(true);
+    
+    // Get user from local storage
+    const userDataStr = localStorage.getItem('user');
+    const user = userDataStr ? JSON.parse(userDataStr) : null;
+    
+    try {
+      const docRef = await addDoc(collection(db, 'sos_alerts'), {
+        timestamp: serverTimestamp(),
+        uid: user?.uid || 'guest',
+        userName: user?.name || 'Traveler',
+        location: "Current Location",
+        status: "active"
+      });
+      setActiveSosId(docRef.id);
+    } catch(e) {
+      console.error(e);
+      alert("Firebase Error: " + e.message + "\n\nPlease ensure your Firestore Database is created in Test Mode.");
+    }
+  };
+
+  const cancelSOS = async () => {
+    setSosActive(false);
+    if (activeSosId) {
+      try {
+        await updateDoc(doc(db, 'sos_alerts', activeSosId), { status: 'cancelled' });
+      } catch (e) {
+        console.error("Failed to cancel on firebase:", e);
+      }
+      setActiveSosId(null);
+    }
   };
 
   return (
@@ -48,7 +96,7 @@ export default function SOS() {
             <button 
               className="btn" 
               style={{ backgroundColor: 'white', color: 'var(--color-danger)', marginTop: '32px', width: '100%' }}
-              onClick={() => setSosActive(false)}
+              onClick={cancelSOS}
             >
               Cancel Alert
             </button>
@@ -81,6 +129,39 @@ export default function SOS() {
         )}
 
       </div>
+
+      {/* Responder Full Screen Popup */}
+      {sosResponse && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div className="card flex-col items-center" style={{ backgroundColor: '#1C1C1E', color: 'white', padding: '32px', width: '100%', maxWidth: '340px', textAlign: 'center', border: '1px solid var(--color-danger)' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(235, 32, 38, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+              <ShieldAlert size={36} color="var(--color-danger)" />
+            </div>
+            
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: 'var(--color-danger)' }}>Help is on the way!</h2>
+            <p style={{ marginBottom: '24px', opacity: 0.9 }}>
+              A verified Local Guardian has received your distress signal and is responding.
+            </p>
+            
+            <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '16px', width: '100%', marginBottom: '24px' }}>
+              <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Responder</p>
+              <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                {sosResponse.name} <CheckCircle size={16} color="var(--color-secondary)" />
+              </h3>
+              <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Contact</p>
+              <p style={{ fontWeight: 600, color: 'var(--color-primary-light)' }}>{sosResponse.contact}</p>
+            </div>
+
+            <button 
+              className="btn btn-primary" 
+              style={{ width: '100%', padding: '14px' }} 
+              onClick={() => { setSosResponse(null); setActiveSosId(null); setSosActive(false); }}
+            >
+              I'm Safe / Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .animation-fade-in { animation: fadeIn 0.5s ease-in; }

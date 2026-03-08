@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, MapPin, Navigation, Search } from 'lucide-react';
+import { ArrowLeft, MapPin, Navigation, Search, LocateFixed } from 'lucide-react';
 
 export default function TripPlanner() {
   const navigate = useNavigate();
@@ -16,19 +16,41 @@ export default function TripPlanner() {
     }
   };
 
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      setStart('Locating...');
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setStart(`${position.coords.latitude},${position.coords.longitude}`);
+        },
+        (error) => {
+          console.error("Error getting location: ", error);
+          alert("Could not get your location. Please check browser location permissions.");
+          setStart('Current Location');
+        }
+      );
+    } else {
+      alert("Geolocation is not supported by your browser.");
+    }
+  };
+
   return (
     <div className="flex-col" style={{ backgroundColor: 'var(--color-surface)', height: '100vh', position: 'relative' }}>
       
       {/* Interactive Map */}
-      <div style={{ flex: 1, position: 'relative' }}>
+      <div style={{ flex: 1, position: 'relative', backgroundColor: '#e5e3df' }}>
         <iframe 
           title="Trip Map"
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d124415.85303681438!2d77.51159837050361!3d12.9715987!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae1670c9b44e6d%3A0xf8dfc3e8517e4fe0!2sBengaluru%2C%20Karnataka!5e0!3m2!1sen!2sin!4v1710000000000!5m2!1sen!2sin" 
+          src={
+            start && dest && start !== 'Current Location'
+              ? `https://maps.google.com/maps?saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(dest)}&output=embed`
+              : dest 
+                ? `https://maps.google.com/maps?q=${encodeURIComponent(dest)}&output=embed`
+                : `https://maps.google.com/maps?q=Bengaluru&output=embed`
+          }
           width="100%" 
           height="100%" 
-          style={{ border: 0, 
-            filter: 'contrast(1.1) saturate(1.2)' // slightly enhance map colors
-          }} 
+          style={{ border: 0, filter: 'contrast(1.1) saturate(1.2)' }} 
           allowFullScreen={true} 
           loading="lazy" 
           referrerPolicy="no-referrer-when-downgrade"
@@ -68,6 +90,13 @@ export default function TripPlanner() {
               style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', background: 'transparent' }}
               placeholder="Start Location"
             />
+            <div 
+              onClick={getCurrentLocation} 
+              style={{ cursor: 'pointer', color: 'white', backgroundColor: 'var(--color-primary)', padding: '8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              title="Use my current location"
+            >
+              <LocateFixed size={18} />
+            </div>
           </div>
 
           <div style={{ paddingLeft: '26px', borderLeft: '2px dashed var(--color-border)', marginLeft: '25px', height: '16px', marginTop: '-8px', marginBottom: '-8px' }} />
