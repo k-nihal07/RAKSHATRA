@@ -1,0 +1,10 @@
+﻿
+> rakshatra1@0.0.0 lint
+> eslint .
+
+
+C:\Users\Hp\OneDrive\Desktop\Projects\Rakshatra1\src\pages\ProviderDashboard.jsx
+  18:57  error  Parsing error: Unexpected token -
+
+Γ£û 1 problem (1 error, 0 warnings)
+
