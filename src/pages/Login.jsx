@@ -4,6 +4,7 @@ import { ShieldAlert, Globe, Briefcase, User, MapPin, Mail, Lock } from 'lucide-
 
 // Firebase Imports
 import { auth, db } from '../firebase';
+import digilockerImage from '../assets/digilocker.png';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
@@ -31,7 +32,7 @@ export default function Login() {
   const handleAuth = async (e, mode) => {
     e.preventDefault();
     if (!email || !password) return alert("Please fill in email and password");
-    
+
     setLoading(true);
     try {
       let userCredential;
@@ -40,7 +41,7 @@ export default function Login() {
       if (mode === 'login') {
         // Handle Login
         userCredential = await signInWithEmailAndPassword(auth, email, password);
-        
+
         userData = { role: activeTab, email: email, name: "Guest", uid: userCredential.user.uid }; // Default fallback
         try {
           // Fetch user document to get their previously registered role, etc.
@@ -67,7 +68,7 @@ export default function Login() {
         }
 
         userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
+
         // Data format to save
         userData = {
           uid: userCredential.user.uid,
@@ -78,7 +79,7 @@ export default function Login() {
           location: activeTab === 'provider' ? location : null,
           createdAt: new Date().toISOString()
         };
-        
+
         try {
           // Save extra details to Firestore
           await withTimeout(setDoc(doc(db, "users", userCredential.user.uid), userData), 5000);
@@ -116,7 +117,7 @@ export default function Login() {
       backgroundPosition: 'center',
       fontFamily: 'var(--font-family)',
     }}>
-      
+
       {/* Dark overlay for better readability */}
       <div style={{
         position: 'absolute',
@@ -139,7 +140,7 @@ export default function Login() {
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
         color: 'white'
       }}>
-        
+
         {/* Header */}
         <div className="flex-col items-center justify-center text-center" style={{ marginBottom: '32px' }}>
           <div className="flex items-center gap-2" style={{ marginBottom: '8px' }}>
@@ -193,7 +194,7 @@ export default function Login() {
 
         {/* Forms */}
         <form onSubmit={(e) => e.preventDefault()} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          
+
           {activeTab === 'provider' && (
             <>
               {/* Service Type Dropdown */}
@@ -201,7 +202,7 @@ export default function Login() {
                 <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.7 }}>
                   <Briefcase size={18} />
                 </div>
-                <select 
+                <select
                   style={{
                     width: '100%',
                     padding: '16px 16px 16px 48px',
@@ -224,7 +225,7 @@ export default function Login() {
                 </select>
                 <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.7, pointerEvents: 'none' }}>
                   <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
               </div>
@@ -234,7 +235,7 @@ export default function Login() {
                 <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.7 }}>
                   <User size={18} />
                 </div>
-                <input 
+                <input
                   type="text"
                   placeholder="Name or Business Name"
                   style={{
@@ -256,27 +257,27 @@ export default function Login() {
           )}
 
           {activeTab === 'traveler' && (
-             <div style={{ position: 'relative' }}>
-               <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.7 }}>
-                 <User size={18} />
-               </div>
-               <input 
-                 type="text"
-                 placeholder="Full Name"
-                 style={{
-                   width: '100%',
-                   padding: '16px 16px 16px 48px',
-                   backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                   border: '1px solid rgba(255, 255, 255, 0.1)',
-                   borderRadius: '12px',
-                   color: 'white',
-                   fontSize: '0.9rem',
-                   outline: 'none'
-                 }}
-                 value={name}
-                 onChange={(e) => setName(e.target.value)}
-               />
-             </div>
+            <div style={{ position: 'relative' }}>
+              <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.7 }}>
+                <User size={18} />
+              </div>
+              <input
+                type="text"
+                placeholder="Full Name"
+                style={{
+                  width: '100%',
+                  padding: '16px 16px 16px 48px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  color: 'white',
+                  fontSize: '0.9rem',
+                  outline: 'none'
+                }}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
           )}
 
           {/* Email */}
@@ -284,7 +285,7 @@ export default function Login() {
             <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.7 }}>
               <Mail size={18} />
             </div>
-            <input 
+            <input
               type="email"
               placeholder="Email or Phone Number"
               style={{
@@ -308,7 +309,7 @@ export default function Login() {
             <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.7 }}>
               <Lock size={18} />
             </div>
-            <input 
+            <input
               type="password"
               placeholder="Password"
               style={{
@@ -334,7 +335,7 @@ export default function Login() {
                 <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.7 }}>
                   <MapPin size={18} />
                 </div>
-                <input 
+                <input
                   type="text"
                   placeholder="Service Location"
                   style={{
@@ -354,20 +355,20 @@ export default function Login() {
               </div>
 
               {/* DigiLocker Verification Checkbox */}
-              <div style={{ 
-                display: 'flex', alignItems: 'center', gap: '12px', 
-                backgroundColor: 'rgba(255,255,255,0.1)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.2)' 
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '12px',
+                backgroundColor: 'rgba(255,255,255,0.1)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.2)'
               }}>
-                <input 
-                  type="checkbox" 
-                  id="digilocker" 
+                <input
+                  type="checkbox"
+                  id="digilocker"
                   checked={digilockerVerified}
                   onChange={(e) => setDigilockerVerified(e.target.checked)}
                   style={{ width: '20px', height: '20px', accentColor: '#008cff', cursor: 'pointer' }}
                 />
                 <label htmlFor="digilocker" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)' }}>
-                  Verify with 
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/DigiLocker_logo.svg/512px-DigiLocker_logo.svg.png" alt="DigiLocker" style={{ height: '24px', backgroundColor: 'white', padding: '2px 6px', borderRadius: '4px' }} />
+                  Verify with
+                  <img src={digilockerImage} alt="DigiLocker" style={{ height: '24px', backgroundColor: 'white', padding: '2px 6px', borderRadius: '4px' }} />
                 </label>
               </div>
             </>
@@ -375,7 +376,7 @@ export default function Login() {
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-            <button 
+            <button
               type="submit"
               className="btn"
               disabled={loading}
@@ -393,7 +394,7 @@ export default function Login() {
             >
               {loading ? 'Processing...' : 'Login'}
             </button>
-            <button 
+            <button
               type="button"
               className="btn"
               disabled={loading}
@@ -412,12 +413,12 @@ export default function Login() {
               {activeTab === 'provider' ? 'Register' : 'Register Now'}
             </button>
           </div>
-          
+
         </form>
       </div>
 
       {/* Floating SOS - Specific to Login screen per design */}
-      <button 
+      <button
         style={{
           position: 'absolute',
           bottom: '24px',

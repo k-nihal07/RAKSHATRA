@@ -14,6 +14,9 @@ export default function ProviderDashboard() {
   const [activeRequests, setActiveRequests] = useState([]);
   const [hotelRequests, setHotelRequests] = useState([]);
   const [sosRequests, setSosRequests] = useState([]);
+  const [trackingSosId, setTrackingSosId] = useState(null);
+  const [trackingSosData, setTrackingSosData] = useState(null);
+  const [latestFeedback, setLatestFeedback] = useState(null);
 
   useEffect(() => {
     const data = localStorage.getItem('user');
@@ -35,6 +38,41 @@ export default function ProviderDashboard() {
     });
     return () => unsubscribe();
   }, [isOnline]);
+
+  // SOS Response Tracker (Listening for "I'm Safe" cancellation)
+  useEffect(() => {
+    if (!trackingSosId) return;
+    const unsubscribe = onSnapshot(doc(db, 'sos_alerts', trackingSosId), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setTrackingSosData(data);
+        if (data.status === 'cancelled') {
+           alert("USER IS SAFE! The traveler has cancelled the SOS alert. You may stand down.");
+           setTrackingSosId(null);
+           setTrackingSosData(null);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [trackingSosId]);
+
+  // Real-time Feedback Toast Listener
+  useEffect(() => {
+    if (!user.uid || !isOnline) return;
+    const q = query(collection(db, "feedbacks"), where("providerId", "==", user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const fb = change.doc.data();
+          if (fb.timestamp && (Date.now() - fb.timestamp.toMillis() < 10000)) {
+            setLatestFeedback(fb);
+            setTimeout(() => setLatestFeedback(null), 8000);
+          }
+        }
+      });
+    });
+    return () => unsubscribe();
+  }, [user.uid, isOnline]);
 
   // Real-time Service Requests (Bookings) listener
   useEffect(() => {
@@ -75,7 +113,9 @@ export default function ProviderDashboard() {
   const handleHotelRequest = async (id, action) => {
     try {
       if (action === 'confirm') {
-        await updateDoc(doc(db, 'service_requests', id), { status: 'confirmed' });
+        const roomNum = prompt("Enter the assigned Room Number for the guest:");
+        if (!roomNum) return; // User cancelled prompt
+        await updateDoc(doc(db, 'service_requests', id), { status: 'confirmed', roomNumber: roomNum });
       } else if (action === 'full') {
         await updateDoc(doc(db, 'service_requests', id), { status: 'declined' });
       } else if (action === 'verify') {
@@ -92,11 +132,13 @@ export default function ProviderDashboard() {
         await updateDoc(doc(db, 'sos_alerts', id), {
           status: 'responded',
           responder: {
+            id: user.uid || 'provider',
             name: user.name,
             contact: user.email || 'Registered Contact'
           }
         });
-        alert(`You are responding to the SOS. Please proceed immediately to the location.`);
+        setTrackingSosId(id);
+        alert(`You are responding to the SOS. Routing you to their location.`);
       } catch(e) {
         console.error("Failed to update SOS alert", e);
       }
@@ -258,6 +300,46 @@ export default function ProviderDashboard() {
         </div>
       )}
 
+      {/* Real-time Feedback Toast */}
+      {latestFeedback && (
+        <div style={{ position: 'fixed', bottom: '100px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#333', color: 'white', padding: '16px 24px', borderRadius: '12px', zIndex: 2000, display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', width: '90%', maxWidth: '340px', animation: 'slideUp 0.3s ease-out' }}>
+          <div style={{ backgroundColor: '#F57C00', padding: '8px', borderRadius: '50%' }}><Star size={20} color="white" fill="white" /></div>
+          <div>
+            <p style={{ fontWeight: 600, fontSize: '0.95rem' }}>New {latestFeedback.rating}-Star Feedback!</p>
+            <p style={{ fontSize: '0.85rem', opacity: 0.9 }}>"{latestFeedback.text || 'Great service!'}" - {latestFeedback.userName}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Tracking SOS Modal (Map Tracking Provider Side) */}
+      {trackingSosData && trackingSosData.status === 'responded' && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div className="card flex-col items-center" style={{ backgroundColor: '#1C1C1E', color: 'white', padding: '24px', width: '100%', maxWidth: '400px', textAlign: 'center', border: '1px solid var(--color-primary)' }}>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: 'var(--color-primary)' }}>Tracking Traveler</h2>
+            <p style={{ marginBottom: '16px', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>Proceed immediately to location.</p>
+            
+            <div style={{ width: '100%', height: '250px', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <iframe
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                style={{ border: 0 }}
+                src={`https://www.google.com/maps?q=${encodeURIComponent(trackingSosData.location || "Current Location")}&output=embed`}
+                allowFullScreen
+              />
+            </div>
+
+            <button 
+              className="btn btn-primary" 
+              style={{ width: '100%', padding: '14px' }} 
+              onClick={() => { setTrackingSosId(null); setTrackingSosData(null); }}
+            >
+              Close Tracking Map
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Full-Screen Incoming SOS Popup for Providers */}
       {sosRequests.length > 0 && isOnline && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(235,32,38,0.9)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', animation: 'pulseBg 2s infinite' }}>
@@ -294,6 +376,10 @@ export default function ProviderDashboard() {
               0% { background-color: rgba(235,32,38,0.85); }
               50% { background-color: rgba(235,32,38,0.95); }
               100% { background-color: rgba(235,32,38,0.85); }
+            }
+            @keyframes slideUp {
+              from { transform: translate(-50%, 50px); opacity: 0; }
+              to { transform: translate(-50%, 0); opacity: 1; }
             }
           `}</style>
         </div>

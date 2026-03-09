@@ -59,7 +59,6 @@ export default function RouteRecommendation() {
         <div className="card flex-col gap-3" style={{ border: '2px solid var(--color-primary)' }}>
           <div className="flex items-center justify-between">
             <span className="text-xs" style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary)', padding: '4px 8px', borderRadius: '4px', fontWeight: 600 }}>Recommended (Safest)</span>
-            <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>₹70</span>
           </div>
           
           <div className="flex items-center gap-2" style={{ fontWeight: 600 }}>
@@ -70,12 +69,15 @@ export default function RouteRecommendation() {
             <MapPin size={18} color="var(--color-danger)" /> Walk
           </div>
           
-          <div className="flex text-sm text-muted gap-4">
-            <span className="flex items-center gap-1"><Clock size={14} /> 25 mins</span>
-            <span className="flex items-center gap-1"><Info size={14} /> 2 changes</span>
-          </div>
+          {/* Time and changes details removed as requested */}
           
-          <button className="btn btn-outline" style={{ marginTop: '8px', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}>View Steps</button>
+          <button 
+            className="btn btn-outline" 
+            style={{ marginTop: '8px', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}
+            onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(start)}&destination=${encodeURIComponent(dest)}&travelmode=transit`, '_blank')}
+          >
+            View Public Transport Options
+          </button>
         </div>
 
         {/* Route 2: Direct Taxi */}
@@ -93,7 +95,7 @@ export default function RouteRecommendation() {
             <span className="flex items-center gap-1"><Clock size={14} /> 15 mins</span>
           </div>
           
-          <button className="btn btn-primary" style={{ marginTop: '8px' }}>Book Taxi</button>
+          <button className="btn btn-primary" style={{ marginTop: '8px' }} onClick={() => navigate('/transport')}>Book Taxi</button>
         </div>
 
       </div>

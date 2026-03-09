@@ -32,14 +32,33 @@ export default function SOS() {
     const user = userDataStr ? JSON.parse(userDataStr) : null;
     
     try {
-      const docRef = await addDoc(collection(db, 'sos_alerts'), {
-        timestamp: serverTimestamp(),
-        uid: user?.uid || 'guest',
-        userName: user?.name || 'Traveler',
-        location: "Current Location",
-        status: "active"
-      });
-      setActiveSosId(docRef.id);
+      let userLoc = "Current Location";
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            userLoc = `${position.coords.latitude},${position.coords.longitude}`;
+            await createSOS(userLoc);
+          },
+          async (error) => {
+            console.warn("Could not get location, falling back to string.", error);
+            await createSOS(userLoc);
+          },
+          { timeout: 5000 }
+        );
+      } else {
+        await createSOS(userLoc);
+      }
+
+      async function createSOS(loc) {
+        const docRef = await addDoc(collection(db, 'sos_alerts'), {
+          timestamp: serverTimestamp(),
+          uid: user?.uid || 'guest',
+          userName: user?.name || 'Traveler',
+          location: loc,
+          status: "active"
+        });
+        setActiveSosId(docRef.id);
+      }
     } catch(e) {
       console.error(e);
       alert("Firebase Error: " + e.message + "\n\nPlease ensure your Firestore Database is created in Test Mode.");

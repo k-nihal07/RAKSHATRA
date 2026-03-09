@@ -2,18 +2,48 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navigation, Map, ShieldAlert, Car, Building, Star, Compass, CheckCircle } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp, doc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, onSnapshot, query, where, updateDoc } from 'firebase/firestore';
 
 export default function TravelerDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [activeSosId, setActiveSosId] = useState(null);
   const [sosResponse, setSosResponse] = useState(null);
+  const [confirmedBookings, setConfirmedBookings] = useState([]);
 
   useEffect(() => {
     const data = localStorage.getItem('user');
     if (data) setUser(JSON.parse(data));
   }, []);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    const q = query(
+      collection(db, 'service_requests'),
+      where('userId', '==', user.uid),
+      where('status', '==', 'confirmed')
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const bookings = [];
+      snapshot.forEach(docItem => {
+        const data = docItem.data();
+        if (!data.notified) {
+          bookings.push({ id: docItem.id, ...data });
+        }
+      });
+      setConfirmedBookings(bookings);
+    });
+    return () => unsubscribe();
+  }, [user?.uid]);
+  
+  const dismissBooking = async (id) => {
+    try {
+      await updateDoc(doc(db, 'service_requests', id), { notified: true });
+    } catch (e) {
+      console.error("Failed to dismiss booking", e);
+      setConfirmedBookings(prev => prev.filter(b => b.id !== id));
+    }
+  };
 
   useEffect(() => {
     if (!activeSosId) return;
@@ -134,15 +164,34 @@ export default function TravelerDashboard() {
             return;
           }
           try {
-            const docRef = await addDoc(collection(db, 'sos_alerts'), {
-              timestamp: serverTimestamp(),
-              uid: user?.uid || 'guest',
-              userName: user?.name || 'Traveler',
-              location: "Current Location",
-              status: "active"
-            });
-            setActiveSosId(docRef.id);
-            alert("SOS Alert Triggered! Waiting for nearby providers to respond.");
+            let userLoc = "Current Location";
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                  userLoc = `${position.coords.latitude},${position.coords.longitude}`;
+                  await createAlert(userLoc);
+                },
+                async (error) => {
+                  console.warn("Could not get location, falling back to string.", error);
+                  await createAlert(userLoc);
+                },
+                { timeout: 5000 }
+              );
+            } else {
+              await createAlert(userLoc);
+            }
+
+            async function createAlert(loc) {
+              const docRef = await addDoc(collection(db, 'sos_alerts'), {
+                timestamp: serverTimestamp(),
+                uid: user?.uid || 'guest',
+                userName: user?.name || 'Traveler',
+                location: loc,
+                status: "active"
+              });
+              setActiveSosId(docRef.id);
+              alert("SOS Alert Triggered! Waiting for nearby providers to respond.");
+            }
           } catch(e) {
             console.error(e);
             alert("Firebase Error: " + e.message + "\n\nPlease ensure your Firestore Database is created in Test Mode.");
@@ -180,9 +229,50 @@ export default function TravelerDashboard() {
             <button 
               className="btn btn-primary" 
               style={{ width: '100%', padding: '14px' }} 
-              onClick={() => { setSosResponse(null); setActiveSosId(null); }}
+              onClick={async () => { 
+                if (activeSosId) {
+                  try {
+                    await updateDoc(doc(db, 'sos_alerts', activeSosId), { status: 'cancelled' });
+                  } catch(e) {
+                    console.error('Failed to notify provider of cancellation', e);
+                  }
+                }
+                setSosResponse(null); 
+                setActiveSosId(null); 
+              }}
             >
               I'm Safe / Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Hotel Booking Confirmation Popups */}
+      {confirmedBookings.length > 0 && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div className="card flex-col items-center" style={{ backgroundColor: 'white', padding: '32px', width: '100%', maxWidth: '340px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#E8F5E9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+              <Building size={32} color="#4CAF50" />
+            </div>
+            
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: '#333' }}>Hotel Booked!</h2>
+            <p style={{ marginBottom: '24px', color: 'var(--color-text-muted)' }}>
+              Your accommodation has been confirmed by the provider.
+            </p>
+            
+            <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', padding: '16px', width: '100%', marginBottom: '24px', border: '2px dashed #CBD5E1' }}>
+              <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Assigned Room Number</p>
+              <h3 style={{ fontSize: '2rem', color: 'var(--color-primary)', fontWeight: 800 }}>
+                {confirmedBookings[0].roomNumber || 'At Reception'}
+              </h3>
+            </div>
+
+            <button 
+              className="btn btn-primary" 
+              style={{ width: '100%', padding: '14px' }} 
+              onClick={() => dismissBooking(confirmedBookings[0].id)}
+            >
+              Excellent
             </button>
           </div>
         </div>

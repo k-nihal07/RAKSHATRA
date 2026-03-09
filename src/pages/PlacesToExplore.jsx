@@ -6,10 +6,9 @@ export default function PlacesToExplore() {
   const navigate = useNavigate();
 
   const places = [
-    { id: 1, name: 'Lalbagh Botanical Garden', type: 'Attraction', dist: '3.0 km', img: 'https://images.unsplash.com/photo-1596422846543-75c6fa2fde78?auto=format&fit=crop&w=800&q=80', desc: 'Historic 240-acre botanical garden with a glasshouse.' },
-    { id: 2, name: 'Bangalore Palace', type: 'Landmark', dist: '5.2 km', img: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80', desc: 'Tudor-style palace with elegant interior & grounds.' },
-    { id: 3, name: 'Cubbon Park', type: 'Park', dist: '1.5 km', img: 'https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&w=800&q=80', desc: 'Sprawling park with bamboo groves and historic buildings.' },
-    { id: 4, name: 'Nandi Hills', type: 'Landmark', dist: '60 km', img: 'https://images.unsplash.com/photo-1588416936097-41850ab3d86d?auto=format&fit=crop&w=800&q=80', desc: 'Ancient hill fortress known for spectacular sunrise views.' },
+    { id: 2, name: 'Bangalore Palace', type: 'Landmark', dist: '5.2 km', img: 'https://images.pexels.com/photos/258162/pexels-photo-258162.jpeg?auto=compress&cs=tinysrgb&w=800', desc: 'Tudor-style palace with elegant interior & grounds.' },
+    { id: 3, name: 'Cubbon Park', type: 'Park', dist: '1.5 km', img: 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800', desc: 'Sprawling park with bamboo groves and historic buildings.' },
+    { id: 4, name: 'Nandi Hills', type: 'Landmark', dist: '60 km', img: 'https://images.pexels.com/photos/1323550/pexels-photo-1323550.jpeg?auto=compress&cs=tinysrgb&w=800', desc: 'Ancient hill fortress known for spectacular sunrise views.' },
   ];
 
   return (
@@ -38,8 +37,8 @@ export default function PlacesToExplore() {
 
                 <p className="text-sm" style={{ margin: '8px 0' }}>{place.desc}</p>
 
-                <button 
-                  className="btn btn-primary" 
+                <button
+                  className="btn btn-primary"
                   style={{ width: '100%' }}
                   onClick={() => navigate('/planner', { state: { dest: place.name } })}
                 >
