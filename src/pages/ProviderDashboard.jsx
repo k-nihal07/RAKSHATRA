@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, MapPin, Bell, Star, AlertCircle, CheckCircle, Home, Key, ShieldAlert } from 'lucide-react';
+import { Briefcase, MapPin, Bell, Star, AlertCircle, CheckCircle, Home, Key, ShieldAlert, X } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 
@@ -31,8 +31,18 @@ export default function ProviderDashboard() {
     const q = query(collection(db, "sos_alerts"), where("status", "==", "active"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const sosList = [];
+      const now = Date.now();
       snapshot.forEach(doc => {
-        sosList.push({ id: doc.id, ...doc.data(), type: 'SOS', dynamic: true });
+        const data = doc.data();
+        let alertTime = now;
+        if (data.timestamp) {
+           alertTime = data.timestamp.toMillis ? data.timestamp.toMillis() : data.timestamp;
+        }
+        
+        // Ignore alerts older than 1 hour (3600000 ms)
+        if (now - alertTime < 3600000) {
+          sosList.push({ id: doc.id, ...data, type: 'SOS', dynamic: true });
+        }
       });
       setSosRequests(sosList);
     });
@@ -155,6 +165,10 @@ export default function ProviderDashboard() {
     } catch (e) {
       console.error("Error updating transport request:", e);
     }
+  };
+
+  const declineSosRequest = (id) => {
+    setSosRequests(prev => prev.filter(req => req.id !== id));
   };
 
   return (
@@ -340,10 +354,18 @@ export default function ProviderDashboard() {
         </div>
       )}
 
-      {/* Full-Screen Incoming SOS Popup for Providers */}
       {sosRequests.length > 0 && isOnline && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(235,32,38,0.9)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', animation: 'pulseBg 2s infinite' }}>
-          <div className="card flex-col items-center" style={{ backgroundColor: '#1C1C1E', color: 'white', padding: '32px', width: '100%', maxWidth: '340px', textAlign: 'center', border: '2px solid white', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8)' }}>
+          <div className="card flex-col items-center" style={{ position: 'relative', backgroundColor: '#1C1C1E', color: 'white', padding: '32px', width: '100%', maxWidth: '340px', textAlign: 'center', border: '2px solid white', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8)' }}>
+            
+            <button 
+              onClick={() => declineSosRequest(sosRequests[0].id)} 
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}
+              aria-label="Decline"
+            >
+              <X size={24} />
+            </button>
+
             <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'var(--color-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', animation: 'bounceIn 0.5s' }}>
               <ShieldAlert size={40} color="white" />
             </div>
